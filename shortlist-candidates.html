@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Shortlist candidates for placement drives">
+  <title>Shortlist Candidates — Placement Management System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>🛡️ PMS Admin</h2>
+        <span>Administration Panel</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a href="admin-dashboard.html" class="nav-item">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <div class="nav-section-title">Placements</div>
+        <a href="add-vacancy.html" class="nav-item">
+          <span class="nav-icon">➕</span> Add Vacancy
+        </a>
+        <a href="view-applications.html" class="nav-item">
+          <span class="nav-icon">📄</span> View Applications
+        </a>
+        <a href="shortlist-candidates.html" class="nav-item active">
+          <span class="nav-icon">⭐</span> Shortlist Candidates
+        </a>
+        <a href="declare-results.html" class="nav-item">
+          <span class="nav-icon">🏆</span> Declare Results
+        </a>
+        <div class="nav-section-title">Management</div>
+        <a href="manage-records.html" class="nav-item">
+          <span class="nav-icon">🗂️</span> Manage Records
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="nav-item" onclick="logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <a href="admin-dashboard.html">Home</a>
+            <span>›</span>
+            <span>Shortlist Candidates</span>
+          </div>
+          <h1>⭐ Shortlist Candidates</h1>
+          <p>Select eligible students and update their shortlist status</p>
+        </div>
+      </div>
+
+      <!-- Company Selector -->
+      <div class="action-bar">
+        <div class="filter-bar" style="margin-bottom: 0;">
+          <select id="companyFilter" class="form-control" onchange="loadCandidates()">
+            <option value="">— Select a Company / Job —</option>
+          </select>
+        </div>
+        <button class="btn btn-warning" onclick="shortlistSelected()">
+          ⭐ Shortlist Selected
+        </button>
+      </div>
+
+      <!-- Candidates Table -->
+      <div class="card animate-slide-up">
+        <div class="card-header">
+          <h2>Applicants</h2>
+          <span class="badge badge-applied" id="candidateCount">0</span>
+        </div>
+        <div class="table-container" id="tableContainer" style="display: none;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>
+                  <label class="custom-checkbox">
+                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                  </label>
+                </th>
+                <th>Student</th>
+                <th>Department</th>
+                <th>CGPA</th>
+                <th>Skills</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="candidateTable">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">📋</div>
+          <h3>Select a company to view applicants</h3>
+          <p>Choose a job from the dropdown above to see student applications</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const user = requireAuth('admin');
+    if (user) {
+      // Populate company/job filter
+      const jobs = getData('jobs');
+      const select = document.getElementById('companyFilter');
+      jobs.forEach(j => {
+        const opt = document.createElement('option');
+        opt.value = j.id;
+        opt.textContent = `${j.company} — ${j.title}`;
+        select.appendChild(opt);
+      });
+      initSidebar();
+    }
+
+    function loadCandidates() {
+      const jobId = parseInt(document.getElementById('companyFilter').value);
+      const empty = document.getElementById('emptyState');
+      const tableContainer = document.getElementById('tableContainer');
+
+      if (!jobId) {
+        tableContainer.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+
+      const apps = getData('applications').filter(a => a.jobId === jobId);
+      const students = getData('students');
+
+      document.getElementById('candidateCount').textContent = apps.length;
+
+      if (apps.length === 0) {
+        tableContainer.style.display = 'none';
+        empty.innerHTML = `
+          <div class="empty-icon">📭</div>
+          <h3>No applications for this position</h3>
+          <p>No students have applied yet</p>`;
+        empty.style.display = 'block';
+        return;
+      }
+
+      tableContainer.style.display = 'block';
+      empty.style.display = 'none';
+
+      const tbody = document.getElementById('candidateTable');
+      tbody.innerHTML = apps.map(a => {
+        const student = students.find(s => s.id === a.studentId) || {};
+        const isShortlisted = a.status === 'shortlisted' || a.status === 'selected';
+        return `
+          <tr>
+            <td>
+              <label class="custom-checkbox">
+                <input type="checkbox" class="candidate-check" data-appid="${a.id}" ${isShortlisted ? 'checked disabled' : ''}>
+              </label>
+            </td>
+            <td>
+              <div style="font-weight: 500;">${a.studentName}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">${student.email || ''}</div>
+            </td>
+            <td>${student.department || 'N/A'}</td>
+            <td><span style="font-weight: 700; color: ${(student.cgpa||0) >= 7.5 ? 'var(--accent-success)' : 'var(--accent-warning)'};">${student.cgpa || 'N/A'}</span></td>
+            <td>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                ${(student.skills || '').split(',').slice(0, 3).map(s => `<span class="badge badge-applied" style="font-size: 0.625rem;">${s.trim()}</span>`).join('')}
+              </div>
+            </td>
+            <td>${getStatusBadge(a.status)}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    function toggleSelectAll() {
+      const checkAll = document.getElementById('selectAll').checked;
+      document.querySelectorAll('.candidate-check:not([disabled])').forEach(cb => {
+        cb.checked = checkAll;
+      });
+    }
+
+    function shortlistSelected() {
+      const checked = document.querySelectorAll('.candidate-check:checked:not([disabled])');
+      if (checked.length === 0) {
+        showToast('Please select at least one candidate to shortlist.', 'warning');
+        return;
+      }
+
+      const apps = getData('applications');
+      checked.forEach(cb => {
+        const appId = parseInt(cb.dataset.appid);
+        const app = apps.find(a => a.id === appId);
+        if (app && app.status === 'applied') {
+          app.status = 'shortlisted';
+        }
+      });
+
+      setData('applications', apps);
+      showToast(`${checked.length} candidate(s) shortlisted successfully!`, 'success');
+      loadCandidates();
+    }
+  </script>
+</body>
+</html>

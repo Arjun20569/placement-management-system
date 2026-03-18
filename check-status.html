@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Check your application status - View shortlisted and selected applications">
+  <title>Check Status — Placement Management System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>🎓 PMS</h2>
+        <span>Student Portal</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a href="student-dashboard.html" class="nav-item">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="student-profile.html" class="nav-item">
+          <span class="nav-icon">👤</span> My Profile
+        </a>
+        <div class="nav-section-title">Placements</div>
+        <a href="view-jobs.html" class="nav-item">
+          <span class="nav-icon">💼</span> View Jobs
+        </a>
+        <a href="apply-job.html" class="nav-item">
+          <span class="nav-icon">📝</span> Apply for Job
+        </a>
+        <a href="check-status.html" class="nav-item active">
+          <span class="nav-icon">📋</span> Check Status
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="nav-item" onclick="logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <a href="student-dashboard.html">Home</a>
+            <span>›</span>
+            <span>Check Status</span>
+          </div>
+          <h1>📋 Application Status</h1>
+          <p>Track the status of your placement applications</p>
+        </div>
+      </div>
+
+      <!-- Status Summary -->
+      <div class="stats-grid">
+        <div class="stat-card accent-blue">
+          <div class="stat-icon">📝</div>
+          <div class="stat-value" id="totalApps">0</div>
+          <div class="stat-label">Total Applications</div>
+        </div>
+        <div class="stat-card accent-yellow">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-value" id="shortlistedApps">0</div>
+          <div class="stat-label">Shortlisted</div>
+        </div>
+        <div class="stat-card accent-green">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-value" id="selectedApps">0</div>
+          <div class="stat-label">Selected</div>
+        </div>
+        <div class="stat-card accent-red">
+          <div class="stat-icon">❌</div>
+          <div class="stat-value" id="rejectedApps">0</div>
+          <div class="stat-label">Rejected</div>
+        </div>
+      </div>
+
+      <!-- Filter -->
+      <div class="filter-bar">
+        <select id="statusFilter" class="form-control" onchange="loadApplications()">
+          <option value="">All Statuses</option>
+          <option value="applied">Applied</option>
+          <option value="shortlisted">Shortlisted</option>
+          <option value="selected">Selected</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+
+      <!-- Applications Table -->
+      <div class="card animate-slide-up">
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Company</th>
+                <th>Position</th>
+                <th>Applied Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="appTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-icon">📭</div>
+          <h3>No applications found</h3>
+          <p>You haven't applied to any positions yet. <a href="view-jobs.html" style="color: var(--accent-primary);">Browse Jobs →</a></p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const user = requireAuth('student');
+    if (user) {
+      loadApplications();
+      initSidebar();
+    }
+
+    function loadApplications() {
+      const apps = getData('applications').filter(a => a.studentId === user.studentId);
+      const filter = document.getElementById('statusFilter').value;
+
+      // Update stats
+      document.getElementById('totalApps').textContent = apps.length;
+      document.getElementById('shortlistedApps').textContent = apps.filter(a => a.status === 'shortlisted').length;
+      document.getElementById('selectedApps').textContent = apps.filter(a => a.status === 'selected').length;
+      document.getElementById('rejectedApps').textContent = apps.filter(a => a.status === 'rejected').length;
+
+      const filtered = filter ? apps.filter(a => a.status === filter) : apps;
+      const tbody = document.getElementById('appTableBody');
+      const empty = document.getElementById('emptyState');
+      const tableContainer = document.querySelector('.table-container');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        tableContainer.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+
+      tableContainer.style.display = 'block';
+      empty.style.display = 'none';
+
+      tbody.innerHTML = filtered.map((app, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>
+            <div style="font-weight: 500;">${app.company}</div>
+          </td>
+          <td>${app.title}</td>
+          <td>${formatDate(app.appliedDate)}</td>
+          <td>${getStatusBadge(app.status)}</td>
+        </tr>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

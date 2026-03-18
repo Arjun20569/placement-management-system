@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="View available placement and internship opportunities">
+  <title>View Jobs — Placement Management System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>🎓 PMS</h2>
+        <span>Student Portal</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a href="student-dashboard.html" class="nav-item">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="student-profile.html" class="nav-item">
+          <span class="nav-icon">👤</span> My Profile
+        </a>
+        <div class="nav-section-title">Placements</div>
+        <a href="view-jobs.html" class="nav-item active">
+          <span class="nav-icon">💼</span> View Jobs
+        </a>
+        <a href="apply-job.html" class="nav-item">
+          <span class="nav-icon">📝</span> Apply for Job
+        </a>
+        <a href="check-status.html" class="nav-item">
+          <span class="nav-icon">📋</span> Check Status
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="nav-item" onclick="logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <a href="student-dashboard.html">Home</a>
+            <span>›</span>
+            <span>View Jobs</span>
+          </div>
+          <h1>💼 Available Opportunities</h1>
+          <p>Browse and apply to placement & internship openings</p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search company or role..." oninput="filterJobs()">
+        <select id="typeFilter" class="form-control" onchange="filterJobs()">
+          <option value="">All Types</option>
+          <option value="Full-Time">Full-Time</option>
+          <option value="Internship">Internship</option>
+        </select>
+      </div>
+
+      <!-- Jobs Grid -->
+      <div class="jobs-grid" id="jobsGrid">
+        <!-- Populated by JS -->
+      </div>
+
+      <div class="empty-state" id="emptyState" style="display: none;">
+        <div class="empty-icon">🔍</div>
+        <h3>No jobs found</h3>
+        <p>Try adjusting your search filters</p>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const user = requireAuth('student');
+    if (user) {
+      loadJobs();
+      initSidebar();
+    }
+
+    function loadJobs(filter = '') {
+      const jobs = getData('jobs');
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const type = document.getElementById('typeFilter').value;
+      const applications = getData('applications').filter(a => a.studentId === user.studentId);
+
+      const filtered = jobs.filter(j => {
+        const matchSearch = j.company.toLowerCase().includes(search) || j.title.toLowerCase().includes(search);
+        const matchType = !type || j.type === type;
+        return matchSearch && matchType;
+      });
+
+      const grid = document.getElementById('jobsGrid');
+      const empty = document.getElementById('emptyState');
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+
+      empty.style.display = 'none';
+      grid.innerHTML = filtered.map(job => {
+        const hasApplied = applications.some(a => a.jobId === job.id);
+        return `
+          <div class="job-card">
+            <div class="company-name">${job.company}</div>
+            <div class="job-title">${job.title}</div>
+            <div class="job-details">
+              <div class="job-detail-item">
+                <span class="icon">📍</span> ${job.location}
+              </div>
+              <div class="job-detail-item">
+                <span class="icon">📅</span> Deadline: ${formatDate(job.deadline)}
+              </div>
+              <div class="job-detail-item">
+                <span class="icon">🏷️</span> ${job.type}
+              </div>
+            </div>
+            <div class="job-description">${job.description}</div>
+            <div class="eligibility">
+              <div class="eligibility-title">Eligibility Criteria</div>
+              <div class="eligibility-text">${job.eligibility}</div>
+            </div>
+            <div class="job-footer">
+              <div class="package">💰 ${job.package}</div>
+              ${hasApplied
+                ? '<span class="badge badge-applied">✅ Applied</span>'
+                : `<a href="apply-job.html?jobId=${job.id}" class="btn btn-primary btn-sm">Apply Now →</a>`
+              }
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function filterJobs() {
+      loadJobs();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Declare placement results - Mark selected students and publish final results">
+  <title>Declare Results — Placement Management System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>🛡️ PMS Admin</h2>
+        <span>Administration Panel</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a href="admin-dashboard.html" class="nav-item">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <div class="nav-section-title">Placements</div>
+        <a href="add-vacancy.html" class="nav-item">
+          <span class="nav-icon">➕</span> Add Vacancy
+        </a>
+        <a href="view-applications.html" class="nav-item">
+          <span class="nav-icon">📄</span> View Applications
+        </a>
+        <a href="shortlist-candidates.html" class="nav-item">
+          <span class="nav-icon">⭐</span> Shortlist Candidates
+        </a>
+        <a href="declare-results.html" class="nav-item active">
+          <span class="nav-icon">🏆</span> Declare Results
+        </a>
+        <div class="nav-section-title">Management</div>
+        <a href="manage-records.html" class="nav-item">
+          <span class="nav-icon">🗂️</span> Manage Records
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="nav-item" onclick="logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <a href="admin-dashboard.html">Home</a>
+            <span>›</span>
+            <span>Declare Results</span>
+          </div>
+          <h1>🏆 Declare Placement Results</h1>
+          <p>Mark selected students and publish the final placement results</p>
+        </div>
+      </div>
+
+      <!-- Company Selector -->
+      <div class="action-bar">
+        <div class="filter-bar" style="margin-bottom: 0;">
+          <select id="companyFilter" class="form-control" onchange="loadShortlisted()">
+            <option value="">— Select a Company / Job —</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-success" onclick="markSelected()">
+            ✅ Mark as Selected
+          </button>
+          <button class="btn btn-danger" onclick="markRejected()">
+            ❌ Mark as Rejected
+          </button>
+        </div>
+      </div>
+
+      <!-- Results Table -->
+      <div class="card animate-slide-up">
+        <div class="card-header">
+          <h2>Shortlisted Candidates</h2>
+          <span class="badge badge-shortlisted" id="shortlistCount">0</span>
+        </div>
+        <div class="table-container" id="tableContainer" style="display: none;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>
+                  <label class="custom-checkbox">
+                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                  </label>
+                </th>
+                <th>Student</th>
+                <th>Department</th>
+                <th>CGPA</th>
+                <th>Current Status</th>
+              </tr>
+            </thead>
+            <tbody id="resultTable">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">🏆</div>
+          <h3>Select a company to declare results</h3>
+          <p>Choose a job from the dropdown to view shortlisted candidates</p>
+        </div>
+      </div>
+
+      <!-- Published Results -->
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+          <h2>📢 Published Results</h2>
+        </div>
+        <div id="publishedResults">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const user = requireAuth('admin');
+    if (user) {
+      const jobs = getData('jobs');
+      const select = document.getElementById('companyFilter');
+      jobs.forEach(j => {
+        const opt = document.createElement('option');
+        opt.value = j.id;
+        opt.textContent = `${j.company} — ${j.title}`;
+        select.appendChild(opt);
+      });
+      loadPublishedResults();
+      initSidebar();
+    }
+
+    function loadShortlisted() {
+      const jobId = parseInt(document.getElementById('companyFilter').value);
+      const empty = document.getElementById('emptyState');
+      const tableContainer = document.getElementById('tableContainer');
+
+      if (!jobId) {
+        tableContainer.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+
+      const apps = getData('applications').filter(a => a.jobId === jobId && (a.status === 'shortlisted' || a.status === 'selected' || a.status === 'rejected'));
+      const students = getData('students');
+
+      document.getElementById('shortlistCount').textContent = apps.length;
+
+      if (apps.length === 0) {
+        tableContainer.style.display = 'none';
+        empty.innerHTML = `
+          <div class="empty-icon">📭</div>
+          <h3>No shortlisted candidates</h3>
+          <p>Shortlist candidates first from the <a href="shortlist-candidates.html" style="color: var(--accent-primary);">Shortlist page</a></p>`;
+        empty.style.display = 'block';
+        return;
+      }
+
+      tableContainer.style.display = 'block';
+      empty.style.display = 'none';
+
+      const tbody = document.getElementById('resultTable');
+      tbody.innerHTML = apps.map(a => {
+        const student = students.find(s => s.id === a.studentId) || {};
+        const isDone = a.status === 'selected' || a.status === 'rejected';
+        return `
+          <tr>
+            <td>
+              <label class="custom-checkbox">
+                <input type="checkbox" class="result-check" data-appid="${a.id}" ${isDone ? 'disabled' : ''}>
+              </label>
+            </td>
+            <td>
+              <div style="font-weight: 500;">${a.studentName}</div>
+            </td>
+            <td>${student.department || 'N/A'}</td>
+            <td><span style="font-weight: 700; color: var(--accent-success);">${student.cgpa || 'N/A'}</span></td>
+            <td>${getStatusBadge(a.status)}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    function toggleSelectAll() {
+      const checkAll = document.getElementById('selectAll').checked;
+      document.querySelectorAll('.result-check:not([disabled])').forEach(cb => {
+        cb.checked = checkAll;
+      });
+    }
+
+    function markSelected() {
+      updateStatus('selected', '✅');
+    }
+
+    function markRejected() {
+      updateStatus('rejected', '❌');
+    }
+
+    function updateStatus(newStatus, icon) {
+      const checked = document.querySelectorAll('.result-check:checked:not([disabled])');
+      if (checked.length === 0) {
+        showToast('Please select at least one candidate.', 'warning');
+        return;
+      }
+
+      const apps = getData('applications');
+      checked.forEach(cb => {
+        const appId = parseInt(cb.dataset.appid);
+        const app = apps.find(a => a.id === appId);
+        if (app) {
+          app.status = newStatus;
+        }
+      });
+
+      setData('applications', apps);
+      showToast(`${icon} ${checked.length} candidate(s) marked as ${newStatus}!`, newStatus === 'selected' ? 'success' : 'error');
+      loadShortlisted();
+      loadPublishedResults();
+    }
+
+    function loadPublishedResults() {
+      const apps = getData('applications').filter(a => a.status === 'selected');
+      const container = document.getElementById('publishedResults');
+
+      if (apps.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="padding: 30px;">
+            <p style="color: var(--text-muted);">No results published yet</p>
+          </div>`;
+        return;
+      }
+
+      // Group by company
+      const grouped = {};
+      apps.forEach(a => {
+        const key = `${a.company} — ${a.title}`;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(a);
+      });
+
+      container.innerHTML = Object.entries(grouped).map(([key, items]) => `
+        <div style="margin-bottom: 16px;">
+          <div style="font-weight: 600; margin-bottom: 8px; color: var(--accent-success);">🏢 ${key}</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            ${items.map(i => `
+              <div style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: rgba(16,185,129,0.1); border-radius: var(--radius-sm); border: 1px solid rgba(16,185,129,0.2);">
+                <div class="avatar" style="width: 28px; height: 28px; font-size: 0.7rem;">${getInitials(i.studentName)}</div>
+                <span style="font-size: 0.875rem; font-weight: 500;">${i.studentName}</span>
+                <span class="badge badge-selected">Selected</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

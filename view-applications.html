@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="View all student applications for placement opportunities">
+  <title>View Applications — Placement Management System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>🛡️ PMS Admin</h2>
+        <span>Administration Panel</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a href="admin-dashboard.html" class="nav-item">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <div class="nav-section-title">Placements</div>
+        <a href="add-vacancy.html" class="nav-item">
+          <span class="nav-icon">➕</span> Add Vacancy
+        </a>
+        <a href="view-applications.html" class="nav-item active">
+          <span class="nav-icon">📄</span> View Applications
+        </a>
+        <a href="shortlist-candidates.html" class="nav-item">
+          <span class="nav-icon">⭐</span> Shortlist Candidates
+        </a>
+        <a href="declare-results.html" class="nav-item">
+          <span class="nav-icon">🏆</span> Declare Results
+        </a>
+        <div class="nav-section-title">Management</div>
+        <a href="manage-records.html" class="nav-item">
+          <span class="nav-icon">🗂️</span> Manage Records
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="nav-item" onclick="logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <a href="admin-dashboard.html">Home</a>
+            <span>›</span>
+            <span>View Applications</span>
+          </div>
+          <h1>📄 Student Applications</h1>
+          <p>Review and manage all student applications</p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="action-bar">
+        <div class="filter-bar" style="margin-bottom: 0;">
+          <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search student or company..." oninput="loadApplications()">
+          <select id="statusFilter" class="form-control" onchange="loadApplications()">
+            <option value="">All Statuses</option>
+            <option value="applied">Applied</option>
+            <option value="shortlisted">Shortlisted</option>
+            <option value="selected">Selected</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <select id="companyFilter" class="form-control" onchange="loadApplications()">
+            <option value="">All Companies</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Applications Table -->
+      <div class="card animate-slide-up">
+        <div class="card-header">
+          <h2>All Applications</h2>
+          <span class="badge badge-applied" id="appCount">0</span>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Student Name</th>
+                <th>Company</th>
+                <th>Position</th>
+                <th>Applied Date</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="appTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-icon">📭</div>
+          <h3>No applications found</h3>
+          <p>Adjust your filters to see applications</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Student Detail Modal -->
+  <div id="studentModal" style="display:none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.6); align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 500px; width: 90%; margin: auto; margin-top: 10vh;">
+      <div class="card-header">
+        <h2>👤 Student Details</h2>
+        <button class="btn btn-secondary btn-sm" onclick="closeModal()">✕</button>
+      </div>
+      <div id="studentDetails">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const user = requireAuth('admin');
+    if (user) {
+      // Populate company filter
+      const jobs = getData('jobs');
+      const companies = [...new Set(jobs.map(j => j.company))];
+      const companyFilter = document.getElementById('companyFilter');
+      companies.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        companyFilter.appendChild(opt);
+      });
+
+      loadApplications();
+      initSidebar();
+    }
+
+    function loadApplications() {
+      const apps = getData('applications');
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const status = document.getElementById('statusFilter').value;
+      const company = document.getElementById('companyFilter').value;
+
+      const filtered = apps.filter(a => {
+        const matchSearch = a.studentName.toLowerCase().includes(search) || a.company.toLowerCase().includes(search);
+        const matchStatus = !status || a.status === status;
+        const matchCompany = !company || a.company === company;
+        return matchSearch && matchStatus && matchCompany;
+      });
+
+      document.getElementById('appCount').textContent = filtered.length;
+      const tbody = document.getElementById('appTableBody');
+      const empty = document.getElementById('emptyState');
+      const tableContainer = document.querySelector('.table-container');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        tableContainer.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+
+      tableContainer.style.display = 'block';
+      empty.style.display = 'none';
+
+      tbody.innerHTML = filtered.map((a, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>
+            <span style="cursor: pointer; color: var(--accent-primary);" onclick="viewStudent(${a.studentId})">${a.studentName}</span>
+          </td>
+          <td>${a.company}</td>
+          <td>${a.title}</td>
+          <td>${formatDate(a.appliedDate)}</td>
+          <td>${getStatusBadge(a.status)}</td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="viewStudent(${a.studentId})">👁️ View</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function viewStudent(studentId) {
+      const students = getData('students');
+      const student = students.find(s => s.id === studentId);
+      if (!student) return;
+
+      const modal = document.getElementById('studentModal');
+      modal.style.display = 'flex';
+
+      document.getElementById('studentDetails').innerHTML = `
+        <div style="text-align: center; padding: 16px 0;">
+          <div class="avatar large" style="margin: 0 auto 12px;">${getInitials(student.name)}</div>
+          <h3>${student.name}</h3>
+          <p style="color: var(--text-secondary);">${student.department}</p>
+        </div>
+        <hr class="section-divider">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div><strong>📧 Email:</strong> ${student.email}</div>
+          <div><strong>📱 Phone:</strong> ${student.phone}</div>
+          <div><strong>📊 CGPA:</strong> <span style="color: var(--accent-success); font-weight: 700;">${student.cgpa}</span></div>
+          <div><strong>🛠️ Skills:</strong> ${student.skills.split(',').map(s => `<span class="badge badge-applied" style="margin: 2px;">${s.trim()}</span>`).join(' ')}</div>
+        </div>`;
+    }
+
+    function closeModal() {
+      document.getElementById('studentModal').style.display = 'none';
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('studentModal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Student Profile - Create and update your placement profile">
+  <title>My Profile — Placement Management System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>🎓 PMS</h2>
+        <span>Student Portal</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a href="student-dashboard.html" class="nav-item">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="student-profile.html" class="nav-item active">
+          <span class="nav-icon">👤</span> My Profile
+        </a>
+        <div class="nav-section-title">Placements</div>
+        <a href="view-jobs.html" class="nav-item">
+          <span class="nav-icon">💼</span> View Jobs
+        </a>
+        <a href="apply-job.html" class="nav-item">
+          <span class="nav-icon">📝</span> Apply for Job
+        </a>
+        <a href="check-status.html" class="nav-item">
+          <span class="nav-icon">📋</span> Check Status
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="nav-item" onclick="logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <a href="student-dashboard.html">Home</a>
+            <span>›</span>
+            <span>My Profile</span>
+          </div>
+          <h1>👤 My Profile</h1>
+          <p>Create and update your placement profile</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Profile Form -->
+        <div class="card animate-slide-up">
+          <div class="card-header">
+            <h2>Personal Information</h2>
+          </div>
+          <form id="profileForm" onsubmit="saveProfile(event)">
+            <div class="form-group">
+              <label for="fullName">Full Name</label>
+              <input type="text" id="fullName" class="form-control" placeholder="Enter your full name" required>
+            </div>
+            <div class="form-group">
+              <label for="email">Email Address</label>
+              <input type="email" id="email" class="form-control" placeholder="you@university.ac.in" required>
+            </div>
+            <div class="form-group">
+              <label for="phone">Phone Number</label>
+              <input type="tel" id="phone" class="form-control" placeholder="9876543210" required>
+            </div>
+            <div class="form-group">
+              <label for="department">Department</label>
+              <select id="department" class="form-control" required>
+                <option value="">Select Department</option>
+                <option value="Computer Science">Computer Science</option>
+                <option value="Information Technology">Information Technology</option>
+                <option value="ECE">Electronics & Communication</option>
+                <option value="EEE">Electrical Engineering</option>
+                <option value="Mechanical">Mechanical Engineering</option>
+                <option value="Civil">Civil Engineering</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="cgpa">CGPA</label>
+              <input type="number" id="cgpa" class="form-control" placeholder="8.5" step="0.1" min="0" max="10" required>
+            </div>
+            <div class="form-group">
+              <label for="skills">Skills (comma separated)</label>
+              <textarea id="skills" class="form-control" placeholder="Java, Python, Machine Learning, Web Development..." required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="resume">Upload Resume (Simulated)</label>
+              <input type="file" id="resume" class="form-control" accept=".pdf,.doc,.docx">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full btn-lg">
+              💾 Save Profile
+            </button>
+          </form>
+        </div>
+
+        <!-- Profile Preview -->
+        <div class="card animate-slide-up" style="animation-delay: 0.15s;">
+          <div class="card-header">
+            <h2>Profile Preview</h2>
+          </div>
+          <div style="text-align: center; padding: 20px 0;">
+            <div class="avatar large" id="profileAvatar" style="margin: 0 auto 16px; cursor: pointer; position: relative;" title="Update Profile Picture" onclick="document.getElementById('profilePicInput').click()">AS</div>
+            <input type="file" id="profilePicInput" accept="image/*" style="display: none;">
+            <h3 id="previewName" style="margin-bottom: 4px;">Arjun Sharma</h3>
+            <p style="color: var(--text-secondary); font-size: 0.875rem;" id="previewDept">Computer Science</p>
+          </div>
+          <hr class="section-divider">
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Email</div>
+              <div id="previewEmail" style="font-size: 0.9375rem;">arjun@university.ac.in</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Phone</div>
+              <div id="previewPhone" style="font-size: 0.9375rem;">9876543210</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">CGPA</div>
+              <div id="previewCgpa" style="font-size: 1.25rem; font-weight: 700; color: var(--accent-success);">8.2</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Skills</div>
+              <div id="previewSkills" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const user = requireAuth('student');
+    if (user) {
+      const students = getData('students');
+      const student = students.find(s => s.id === user.studentId) || students[0];
+
+      // Fill form
+      document.getElementById('fullName').value = student.name;
+      document.getElementById('email').value = student.email;
+      document.getElementById('phone').value = student.phone;
+      document.getElementById('department').value = student.department;
+      document.getElementById('cgpa').value = student.cgpa;
+      document.getElementById('skills').value = student.skills;
+
+      // Update preview
+      updatePreview(student);
+
+      // Live preview updates
+      ['fullName', 'email', 'phone', 'department', 'cgpa', 'skills'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          updatePreview({
+            name: document.getElementById('fullName').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            department: document.getElementById('department').value,
+            cgpa: document.getElementById('cgpa').value,
+            skills: document.getElementById('skills').value,
+            profilePic: window.tempProfilePic || student.profilePic
+          });
+        });
+      });
+
+      // Handle profile picture upload
+      document.getElementById('profilePicInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            window.tempProfilePic = event.target.result;
+            updatePreview({
+              name: document.getElementById('fullName').value,
+              email: document.getElementById('email').value,
+              phone: document.getElementById('phone').value,
+              department: document.getElementById('department').value,
+              cgpa: document.getElementById('cgpa').value,
+              skills: document.getElementById('skills').value,
+              profilePic: window.tempProfilePic
+            });
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      initSidebar();
+    }
+
+    function updatePreview(data) {
+      const profileAvatar = document.getElementById('profileAvatar');
+      if (data.profilePic || window.tempProfilePic) {
+        const pic = window.tempProfilePic || data.profilePic;
+        profileAvatar.innerHTML = `<img src="${pic}" alt="Profile" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: none; padding: 0;">`;
+        profileAvatar.style.padding = '0';
+      } else {
+        profileAvatar.textContent = getInitials(data.name || 'S U');
+      }
+      document.getElementById('previewName').textContent = data.name || 'Student Name';
+      document.getElementById('previewDept').textContent = data.department || 'Department';
+      document.getElementById('previewEmail').textContent = data.email || 'email@university.ac.in';
+      document.getElementById('previewPhone').textContent = data.phone || '0000000000';
+      document.getElementById('previewCgpa').textContent = data.cgpa || '0.0';
+
+      const skillsContainer = document.getElementById('previewSkills');
+      const skills = (data.skills || '').split(',').map(s => s.trim()).filter(s => s);
+      skillsContainer.innerHTML = skills.map(s =>
+        `<span class="badge badge-applied">${s}</span>`
+      ).join('');
+    }
+
+    function saveProfile(e) {
+      e.preventDefault();
+      const students = getData('students');
+      const idx = students.findIndex(s => s.id === user.studentId);
+
+      const updated = {
+        ...students[idx],
+        name: document.getElementById('fullName').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        department: document.getElementById('department').value,
+        cgpa: parseFloat(document.getElementById('cgpa').value),
+        skills: document.getElementById('skills').value
+      };
+      
+      if (window.tempProfilePic) {
+        updated.profilePic = window.tempProfilePic;
+      }
+      
+      students[idx] = updated;
+      setData('students', students);
+
+      // Also update session storage so dashboard and other pages show the new name
+      const sessionUser = getUser();
+      sessionUser.name = updated.name;
+      sessionStorage.setItem('pms_user', JSON.stringify(sessionUser));
+
+      showToast('Profile updated successfully!', 'success');
+    }
+  </script>
+</body>
+</html>

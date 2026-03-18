@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Apply for placement and internship opportunities">
+  <title>Apply for Job — Placement Management System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>🎓 PMS</h2>
+        <span>Student Portal</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a href="student-dashboard.html" class="nav-item">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="student-profile.html" class="nav-item">
+          <span class="nav-icon">👤</span> My Profile
+        </a>
+        <div class="nav-section-title">Placements</div>
+        <a href="view-jobs.html" class="nav-item">
+          <span class="nav-icon">💼</span> View Jobs
+        </a>
+        <a href="apply-job.html" class="nav-item active">
+          <span class="nav-icon">📝</span> Apply for Job
+        </a>
+        <a href="check-status.html" class="nav-item">
+          <span class="nav-icon">📋</span> Check Status
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="nav-item" onclick="logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <a href="student-dashboard.html">Home</a>
+            <span>›</span>
+            <span>Apply for Job</span>
+          </div>
+          <h1>📝 Apply for Job</h1>
+          <p>Submit your application for a placement opportunity</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Application Form -->
+        <div class="card animate-slide-up">
+          <div class="card-header">
+            <h2>Application Form</h2>
+          </div>
+          <form id="applyForm" onsubmit="submitApplication(event)">
+            <div class="form-group">
+              <label for="jobSelect">Select Job Opportunity</label>
+              <select id="jobSelect" class="form-control" required onchange="showJobDetails()">
+                <option value="">— Choose a job to apply —</option>
+              </select>
+            </div>
+
+            <div id="jobPreview" style="display: none;">
+              <div class="card" style="background: var(--bg-glass); margin-bottom: 20px;">
+                <div class="company-name" id="jpCompany"></div>
+                <div class="job-title" id="jpTitle" style="margin-bottom: 8px;"></div>
+                <div class="job-details" style="margin-bottom: 12px;">
+                  <div class="job-detail-item"><span class="icon">📍</span> <span id="jpLocation"></span></div>
+                  <div class="job-detail-item"><span class="icon">💰</span> <span id="jpPackage"></span></div>
+                  <div class="job-detail-item"><span class="icon">📅</span> Deadline: <span id="jpDeadline"></span></div>
+                </div>
+                <div class="eligibility">
+                  <div class="eligibility-title">Eligibility Criteria</div>
+                  <div class="eligibility-text" id="jpEligibility"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="coverLetter">Cover Letter / Message (Optional)</label>
+              <textarea id="coverLetter" class="form-control" placeholder="Write a brief cover letter or message to the recruiter..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full btn-lg" id="submitBtn">
+              🚀 Submit Application
+            </button>
+          </form>
+        </div>
+
+        <!-- Recent Applications -->
+        <div class="card animate-slide-up" style="animation-delay: 0.15s;">
+          <div class="card-header">
+            <h2>📌 Your Recent Applications</h2>
+          </div>
+          <div id="recentApps">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const user = requireAuth('student');
+    if (user) {
+      loadJobOptions();
+      loadRecentApps();
+      initSidebar();
+
+      // Check if jobId is in URL params
+      const params = new URLSearchParams(window.location.search);
+      const preselectedJob = params.get('jobId');
+      if (preselectedJob) {
+        document.getElementById('jobSelect').value = preselectedJob;
+        showJobDetails();
+      }
+    }
+
+    function loadJobOptions() {
+      const jobs = getData('jobs');
+      const apps = getData('applications').filter(a => a.studentId === user.studentId);
+      const appliedJobIds = apps.map(a => a.jobId);
+      const select = document.getElementById('jobSelect');
+
+      jobs.forEach(job => {
+        if (!appliedJobIds.includes(job.id)) {
+          const opt = document.createElement('option');
+          opt.value = job.id;
+          opt.textContent = `${job.company} — ${job.title} (${job.package})`;
+          select.appendChild(opt);
+        }
+      });
+    }
+
+    function showJobDetails() {
+      const jobId = parseInt(document.getElementById('jobSelect').value);
+      const preview = document.getElementById('jobPreview');
+
+      if (!jobId) {
+        preview.style.display = 'none';
+        return;
+      }
+
+      const job = getData('jobs').find(j => j.id === jobId);
+      if (job) {
+        document.getElementById('jpCompany').textContent = job.company;
+        document.getElementById('jpTitle').textContent = job.title;
+        document.getElementById('jpLocation').textContent = job.location;
+        document.getElementById('jpPackage').textContent = job.package;
+        document.getElementById('jpDeadline').textContent = formatDate(job.deadline);
+        document.getElementById('jpEligibility').textContent = job.eligibility;
+        preview.style.display = 'block';
+      }
+    }
+
+    function submitApplication(e) {
+      e.preventDefault();
+      const jobId = parseInt(document.getElementById('jobSelect').value);
+      if (!jobId) {
+        showToast('Please select a job to apply.', 'warning');
+        return;
+      }
+
+      const job = getData('jobs').find(j => j.id === jobId);
+      const apps = getData('applications');
+
+      // Check if already applied
+      if (apps.some(a => a.studentId === user.studentId && a.jobId === jobId)) {
+        showToast('You have already applied for this position.', 'warning');
+        return;
+      }
+
+      const newApp = {
+        id: getNextId('applications'),
+        studentId: user.studentId,
+        studentName: user.name,
+        jobId: job.id,
+        company: job.company,
+        title: job.title,
+        status: 'applied',
+        appliedDate: new Date().toISOString().split('T')[0]
+      };
+
+      apps.push(newApp);
+      setData('applications', apps);
+
+      showToast(`Application submitted to ${job.company} successfully!`, 'success');
+
+      // Reset form
+      document.getElementById('applyForm').reset();
+      document.getElementById('jobPreview').style.display = 'none';
+
+      // Reload
+      document.getElementById('jobSelect').innerHTML = '<option value="">— Choose a job to apply —</option>';
+      loadJobOptions();
+      loadRecentApps();
+    }
+
+    function loadRecentApps() {
+      const apps = getData('applications').filter(a => a.studentId === user.studentId);
+      const container = document.getElementById('recentApps');
+
+      if (apps.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <h3>No applications yet</h3>
+            <p>Select a job above to submit your first application</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `<div class="notification-list">
+        ${apps.reverse().map(a => `
+          <div class="notification-item" style="border-left-color: ${
+            a.status === 'selected' ? 'var(--accent-success)' :
+            a.status === 'shortlisted' ? 'var(--accent-warning)' :
+            a.status === 'rejected' ? 'var(--accent-danger)' :
+            'var(--accent-primary)'
+          };">
+            <span class="notif-icon">🏢</span>
+            <div class="notif-content">
+              <h4>${a.company} — ${a.title}</h4>
+              <p>Applied: ${formatDate(a.appliedDate)}</p>
+            </div>
+            ${getStatusBadge(a.status)}
+          </div>
+        `).join('')}
+      </div>`;
+    }
+  </script>
+</body>
+</html>

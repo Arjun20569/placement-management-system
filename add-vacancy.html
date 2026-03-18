@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Add new job vacancy - Publish placement opportunities for students">
+  <title>Add Vacancy — Placement Management System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>🛡️ PMS Admin</h2>
+        <span>Administration Panel</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a href="admin-dashboard.html" class="nav-item">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <div class="nav-section-title">Placements</div>
+        <a href="add-vacancy.html" class="nav-item active">
+          <span class="nav-icon">➕</span> Add Vacancy
+        </a>
+        <a href="view-applications.html" class="nav-item">
+          <span class="nav-icon">📄</span> View Applications
+        </a>
+        <a href="shortlist-candidates.html" class="nav-item">
+          <span class="nav-icon">⭐</span> Shortlist Candidates
+        </a>
+        <a href="declare-results.html" class="nav-item">
+          <span class="nav-icon">🏆</span> Declare Results
+        </a>
+        <div class="nav-section-title">Management</div>
+        <a href="manage-records.html" class="nav-item">
+          <span class="nav-icon">🗂️</span> Manage Records
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="nav-item" onclick="logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <a href="admin-dashboard.html">Home</a>
+            <span>›</span>
+            <span>Add Vacancy</span>
+          </div>
+          <h1>➕ Add New Vacancy</h1>
+          <p>Publish a new job or internship opportunity for students</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Add Vacancy Form -->
+        <div class="card animate-slide-up">
+          <div class="card-header">
+            <h2>Job Details</h2>
+          </div>
+          <form id="vacancyForm" onsubmit="addVacancy(event)">
+            <div class="form-group">
+              <label for="company">Company Name</label>
+              <input type="text" id="company" class="form-control" placeholder="e.g., Infosys, TCS, Google" required>
+            </div>
+            <div class="form-group">
+              <label for="jobTitle">Job Title</label>
+              <input type="text" id="jobTitle" class="form-control" placeholder="e.g., Software Developer" required>
+            </div>
+            <div class="form-group">
+              <label for="jobType">Job Type</label>
+              <select id="jobType" class="form-control" required>
+                <option value="">Select Type</option>
+                <option value="Full-Time">Full-Time</option>
+                <option value="Internship">Internship</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="location">Location</label>
+              <input type="text" id="location" class="form-control" placeholder="e.g., Bangalore, Noida" required>
+            </div>
+            <div class="form-group">
+              <label for="package">Package / Stipend</label>
+              <input type="text" id="package" class="form-control" placeholder="e.g., 6.5 LPA or 50,000/month" required>
+            </div>
+            <div class="form-group">
+              <label for="eligibility">Eligibility Criteria</label>
+              <textarea id="eligibility" class="form-control" placeholder="e.g., B.Tech (CS/IT) with minimum 7.0 CGPA, no active backlogs" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="description">Job Description</label>
+              <textarea id="description" class="form-control" placeholder="Describe the role, responsibilities, and perks..." required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="deadline">Application Deadline</label>
+              <input type="date" id="deadline" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full btn-lg">
+              🚀 Publish Vacancy
+            </button>
+          </form>
+        </div>
+
+        <!-- Existing Vacancies -->
+        <div class="card animate-slide-up" style="animation-delay: 0.15s;">
+          <div class="card-header">
+            <h2>📋 Published Vacancies</h2>
+            <span class="badge badge-applied" id="vacancyCount">0</span>
+          </div>
+          <div id="vacancyList">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const user = requireAuth('admin');
+    if (user) {
+      loadVacancies();
+      initSidebar();
+    }
+
+    function addVacancy(e) {
+      e.preventDefault();
+      const jobs = getData('jobs');
+
+      const newJob = {
+        id: getNextId('jobs'),
+        company: document.getElementById('company').value.trim(),
+        title: document.getElementById('jobTitle').value.trim(),
+        type: document.getElementById('jobType').value,
+        location: document.getElementById('location').value.trim(),
+        package: document.getElementById('package').value.trim(),
+        eligibility: document.getElementById('eligibility').value.trim(),
+        description: document.getElementById('description').value.trim(),
+        deadline: document.getElementById('deadline').value,
+        posted: new Date().toISOString().split('T')[0]
+      };
+
+      jobs.push(newJob);
+      setData('jobs', jobs);
+      showToast(`Vacancy for "${newJob.title}" at ${newJob.company} published successfully!`, 'success');
+      document.getElementById('vacancyForm').reset();
+      loadVacancies();
+    }
+
+    function loadVacancies() {
+      const jobs = getData('jobs');
+      document.getElementById('vacancyCount').textContent = jobs.length;
+
+      const container = document.getElementById('vacancyList');
+      if (jobs.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <h3>No vacancies published</h3>
+            <p>Use the form to add a new job vacancy</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `<div class="notification-list">
+        ${jobs.map(j => `
+          <div class="notification-item">
+            <span class="notif-icon">🏢</span>
+            <div class="notif-content">
+              <h4>${j.company} — ${j.title}</h4>
+              <p>📍 ${j.location} &nbsp;|&nbsp; 💰 ${j.package} &nbsp;|&nbsp; 📅 ${formatDate(j.deadline)}</p>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="deleteVacancy(${j.id})">🗑️</button>
+          </div>
+        `).join('')}
+      </div>`;
+    }
+
+    function deleteVacancy(id) {
+      if (confirm('Are you sure you want to delete this vacancy?')) {
+        let jobs = getData('jobs');
+        jobs = jobs.filter(j => j.id !== id);
+        setData('jobs', jobs);
+        showToast('Vacancy deleted.', 'warning');
+        loadVacancies();
+      }
+    }
+  </script>
+</body>
+</html>

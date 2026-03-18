@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Student Dashboard - View placement stats, notifications, and quick actions">
+  <title>Student Dashboard — Placement Management System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="dashboard-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>🎓 PMS</h2>
+        <span>Student Portal</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a href="student-dashboard.html" class="nav-item active">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="student-profile.html" class="nav-item">
+          <span class="nav-icon">👤</span> My Profile
+        </a>
+
+        <div class="nav-section-title">Placements</div>
+        <a href="view-jobs.html" class="nav-item">
+          <span class="nav-icon">💼</span> View Jobs
+        </a>
+        <a href="apply-job.html" class="nav-item">
+          <span class="nav-icon">📝</span> Apply for Job
+        </a>
+        <a href="check-status.html" class="nav-item">
+          <span class="nav-icon">📋</span> Check Status
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="nav-item" onclick="logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <a href="student-dashboard.html">Home</a>
+            <span>›</span>
+            <span>Dashboard</span>
+          </div>
+          <h1 id="welcomeMsg">Welcome back, Student!</h1>
+          <p>Here's your placement overview</p>
+        </div>
+        <div class="avatar" id="userAvatar">AS</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card accent-blue">
+          <div class="stat-icon">💼</div>
+          <div class="stat-value" id="statJobs">0</div>
+          <div class="stat-label">Available Jobs</div>
+        </div>
+        <div class="stat-card accent-cyan">
+          <div class="stat-icon">📝</div>
+          <div class="stat-value" id="statApplications">0</div>
+          <div class="stat-label">Applications Submitted</div>
+        </div>
+        <div class="stat-card accent-yellow">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-value" id="statShortlisted">0</div>
+          <div class="stat-label">Shortlisted</div>
+        </div>
+        <div class="stat-card accent-green">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-value" id="statSelected">0</div>
+          <div class="stat-label">Selected</div>
+        </div>
+      </div>
+
+      <!-- Content Grid -->
+      <div class="grid-2">
+        <!-- Quick Actions -->
+        <div class="card">
+          <div class="card-header">
+            <h2>⚡ Quick Actions</h2>
+          </div>
+          <div class="quick-actions">
+            <a href="view-jobs.html" class="quick-action-card">
+              <div class="action-icon">🔍</div>
+              <div class="action-label">Browse Jobs</div>
+            </a>
+            <a href="apply-job.html" class="quick-action-card">
+              <div class="action-icon">📄</div>
+              <div class="action-label">Apply Now</div>
+            </a>
+            <a href="check-status.html" class="quick-action-card">
+              <div class="action-icon">📊</div>
+              <div class="action-label">Check Status</div>
+            </a>
+            <a href="student-profile.html" class="quick-action-card">
+              <div class="action-icon">✏️</div>
+              <div class="action-label">Edit Profile</div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="card">
+          <div class="card-header">
+            <h2>🔔 Recent Notifications</h2>
+          </div>
+          <div class="notification-list" id="notificationList">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const user = requireAuth('student');
+    if (user) {
+      // Read latest name from localStorage (updated when profile is edited)
+      const students = getData('students');
+      const currentStudent = students.find(s => s.id === user.studentId) || {};
+      const displayName = currentStudent.name || user.name;
+
+      document.getElementById('welcomeMsg').textContent = `Welcome back, ${displayName}!`;
+      
+      const userAvatar = document.getElementById('userAvatar');
+      if (currentStudent.profilePic) {
+        userAvatar.innerHTML = `<img src="${currentStudent.profilePic}" alt="Profile" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: none; padding: 0;">`;
+        userAvatar.style.padding = '0';
+      } else {
+        userAvatar.textContent = getInitials(displayName);
+      }
+
+      // Load stats
+      const jobs = getData('jobs');
+      const apps = getData('applications').filter(a => a.studentId === user.studentId);
+
+      document.getElementById('statJobs').textContent = jobs.length;
+      document.getElementById('statApplications').textContent = apps.length;
+      document.getElementById('statShortlisted').textContent = apps.filter(a => a.status === 'shortlisted').length;
+      document.getElementById('statSelected').textContent = apps.filter(a => a.status === 'selected').length;
+
+      // Load notifications
+      const notifications = getData('notifications');
+      const list = document.getElementById('notificationList');
+      notifications.slice(0, 4).forEach(n => {
+        list.innerHTML += `
+          <div class="notification-item">
+            <span class="notif-icon">${n.icon}</span>
+            <div class="notif-content">
+              <h4>${n.title}</h4>
+              <p>${n.message}</p>
+            </div>
+            <span class="notif-time">${n.time}</span>
+          </div>`;
+      });
+
+      initSidebar();
+    }
+  </script>
+</body>
+</html>

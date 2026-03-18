@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Admin Dashboard - Manage placements, students, and companies">
+  <title>Admin Dashboard — Placement Management System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>🛡️ PMS Admin</h2>
+        <span>Administration Panel</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a href="admin-dashboard.html" class="nav-item active">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+
+        <div class="nav-section-title">Placements</div>
+        <a href="add-vacancy.html" class="nav-item">
+          <span class="nav-icon">➕</span> Add Vacancy
+        </a>
+        <a href="view-applications.html" class="nav-item">
+          <span class="nav-icon">📄</span> View Applications
+        </a>
+        <a href="shortlist-candidates.html" class="nav-item">
+          <span class="nav-icon">⭐</span> Shortlist Candidates
+        </a>
+        <a href="declare-results.html" class="nav-item">
+          <span class="nav-icon">🏆</span> Declare Results
+        </a>
+
+        <div class="nav-section-title">Management</div>
+        <a href="manage-records.html" class="nav-item">
+          <span class="nav-icon">🗂️</span> Manage Records
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="nav-item" onclick="logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <a href="admin-dashboard.html">Home</a>
+            <span>›</span>
+            <span>Dashboard</span>
+          </div>
+          <h1>📊 Admin Dashboard</h1>
+          <p>Overview of placement management activities</p>
+        </div>
+        <div class="avatar" id="adminAvatar">AD</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card accent-blue">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="statStudents">0</div>
+          <div class="stat-label">Registered Students</div>
+        </div>
+        <div class="stat-card accent-cyan">
+          <div class="stat-icon">🏢</div>
+          <div class="stat-value" id="statCompanies">0</div>
+          <div class="stat-label">Companies with Openings</div>
+        </div>
+        <div class="stat-card accent-yellow">
+          <div class="stat-icon">📝</div>
+          <div class="stat-value" id="statApps">0</div>
+          <div class="stat-label">Total Applications</div>
+        </div>
+        <div class="stat-card accent-green">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-value" id="statPlaced">0</div>
+          <div class="stat-label">Students Placed</div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="grid-2">
+        <!-- Quick Actions -->
+        <div class="card">
+          <div class="card-header">
+            <h2>⚡ Quick Actions</h2>
+          </div>
+          <div class="quick-actions">
+            <a href="add-vacancy.html" class="quick-action-card">
+              <div class="action-icon">➕</div>
+              <div class="action-label">Add Vacancy</div>
+            </a>
+            <a href="view-applications.html" class="quick-action-card">
+              <div class="action-icon">📄</div>
+              <div class="action-label">View Applications</div>
+            </a>
+            <a href="shortlist-candidates.html" class="quick-action-card">
+              <div class="action-icon">⭐</div>
+              <div class="action-label">Shortlist</div>
+            </a>
+            <a href="declare-results.html" class="quick-action-card">
+              <div class="action-icon">🏆</div>
+              <div class="action-label">Declare Results</div>
+            </a>
+            <a href="manage-records.html" class="quick-action-card">
+              <div class="action-icon">🗂️</div>
+              <div class="action-label">Manage Records</div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+          <div class="card-header">
+            <h2>🔔 Recent Activity</h2>
+          </div>
+          <div class="notification-list" id="activityList">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Placement Summary Table -->
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+          <h2>📊 Placement Summary by Company</h2>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Position</th>
+                <th>Applications</th>
+                <th>Shortlisted</th>
+                <th>Selected</th>
+              </tr>
+            </thead>
+            <tbody id="summaryTable">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const user = requireAuth('admin');
+    if (user) {
+      const students = getData('students');
+      const jobs = getData('jobs');
+      const apps = getData('applications');
+
+      // Stats
+      document.getElementById('statStudents').textContent = students.length;
+      const uniqueCompanies = [...new Set(jobs.map(j => j.company))];
+      document.getElementById('statCompanies').textContent = uniqueCompanies.length;
+      document.getElementById('statApps').textContent = apps.length;
+      document.getElementById('statPlaced').textContent = apps.filter(a => a.status === 'selected').length;
+
+      // Activity
+      const activityList = document.getElementById('activityList');
+      const activities = [
+        { icon: '📝', title: 'New Application', msg: `${apps.length} total applications received`, time: 'Today' },
+        { icon: '⭐', title: 'Shortlist Update', msg: `${apps.filter(a=>a.status==='shortlisted').length} candidates shortlisted`, time: 'Today' },
+        { icon: '🏆', title: 'Placement Update', msg: `${apps.filter(a=>a.status==='selected').length} students placed successfully`, time: 'Today' },
+        { icon: '🏢', title: 'Active Companies', msg: `${uniqueCompanies.length} companies with active openings`, time: 'Today' }
+      ];
+      activityList.innerHTML = activities.map(a => `
+        <div class="notification-item">
+          <span class="notif-icon">${a.icon}</span>
+          <div class="notif-content">
+            <h4>${a.title}</h4>
+            <p>${a.msg}</p>
+          </div>
+          <span class="notif-time">${a.time}</span>
+        </div>
+      `).join('');
+
+      // Summary Table
+      const summaryTable = document.getElementById('summaryTable');
+      jobs.forEach(job => {
+        const jobApps = apps.filter(a => a.jobId === job.id);
+        summaryTable.innerHTML += `
+          <tr>
+            <td><strong>${job.company}</strong></td>
+            <td>${job.title}</td>
+            <td>${jobApps.length}</td>
+            <td>${jobApps.filter(a=>a.status==='shortlisted').length}</td>
+            <td>${jobApps.filter(a=>a.status==='selected').length}</td>
+          </tr>`;
+      });
+
+      initSidebar();
+    }
+  </script>
+</body>
+</html>
